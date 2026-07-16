@@ -54,20 +54,20 @@ function registrarUsuario(info) {
     const nombreCompleto = String(info.nombre).trim(), correo = String(info.correo).trim().toLowerCase();
     if (!nombreCompleto || nombreCompleto.length < 4) return { ok:false, mensaje:"Nombre completo no válido." };
     if (!correo || correo.indexOf('@') === -1) return { ok:false, mensaje:"Correo electrónico no válido." };
-
+    
     const existente = _buscarUsuarioPorCorreo(correo);
     if (existente) {
       const est = String(existente.datos[COL_ESTADO]).trim().toLowerCase();
       if (est === "pendiente" || est === "aprobado") return { ok:false, mensaje:"Este correo ya tiene cuenta o solicitud." };
     }
-
+    
     const usuarioBase = _generarNombreUsuario(nombreCompleto);
     let usuarioFinal = usuarioBase, sufijo = 1;
     while (_buscarUsuario(usuarioFinal)) { usuarioFinal = usuarioBase + sufijo; sufijo++; }
-
+    
     _insertarUsuario([usuarioFinal, nombreCompleto, String(info.dependencia).trim(), String(info.cargo).trim(), "Pendiente", "", "Pendiente", "SI", _ahora(), _ahora(), correo]);
     _registrarAuditoria({ usuario:usuarioFinal, nombre:nombreCompleto, rol:"Pendiente", correo: correo }, "Solicitó registro", "", "", "Dep: "+info.dependencia);
-    
+        
     return { ok:true, usuarioAsignado: usuarioFinal, mensaje: "Registro exitoso." };
   } catch(err) { return { ok:false, mensaje:err.message }; }
 }
@@ -76,31 +76,48 @@ function iniciarSesion(usuario, clave) {
   try {
     const cuenta = _buscarUsuario(usuario);
     if (!cuenta) return { ok:false, mensaje:"Usuario no registrado." };
-
     const d = cuenta.datos, est = String(d[COL_ESTADO]).trim().toLowerCase(), rol = String(d[COL_ROL]).trim().toLowerCase();
+    
     if (est !== "aprobado") return { ok:false, mensaje:"Cuenta " + est + "." };
     if (rol === "pendiente" || rol === "") return { ok:false, mensaje:"Rol no asignado." };
-    if (String(d[COL_CLAVE]).trim() !== String(clave).trim()) return { ok:false, mensaje:"Contraseña incorrecta." };
+    
+    const claveAlmacenada = String(d[COL_CLAVE]).trim();
+    const hashIngresado = generarHashSHA256(clave);
+    
+    // Soporte retroactivo para el hash de seguridad implementado
+    if (claveAlmacenada !== hashIngresado && claveAlmacenada !== String(clave).trim()) {
+      return { ok:false, mensaje:"Contraseña incorrecta." };
+    }
+    
+    let esPrimerIngreso = String(d[COL_PRIMER_ING]).trim().toUpperCase() === "SI";
+    if (claveAlmacenada === String(clave).trim() && claveAlmacenada !== hashIngresado) {
+       esPrimerIngreso = true; // Fuerza cambio para que la nueva quede encriptada
+    }
 
     _registrarAuditoria({ usuario:d[COL_USUARIO], nombre:d[COL_NOMBRE], rol:d[COL_ROL], correo:d[COL_CORREO]?String(d[COL_CORREO]):"" }, "Inició sesión","","","");
-    return { ok:true, usuario: d[COL_USUARIO], nombre: d[COL_NOMBRE], rol: rol, primerIngreso: String(d[COL_PRIMER_ING]).trim().toUpperCase() === "SI" };
+    return { ok:true, usuario: d[COL_USUARIO], nombre: d[COL_NOMBRE], rol: rol, primerIngreso: esPrimerIngreso };
   } catch(err) { return { ok:false, mensaje:err.message }; }
 }
 
 function cambiarContrasena(usuario, actual, nueva) {
   try {
     const cuenta = _buscarUsuario(usuario);
-    if (!cuenta || String(cuenta.datos[COL_CLAVE]).trim() !== String(actual).trim()) return { ok:false, mensaje:"Contraseña actual incorrecta." };
+    if (!cuenta) return { ok:false, mensaje:"Cuenta no encontrada." };
+    
+    const claveAlmacenada = String(cuenta.datos[COL_CLAVE]).trim();
+    const hashActualIngresado = generarHashSHA256(actual);
+    
+    if (claveAlmacenada !== hashActualIngresado && claveAlmacenada !== String(actual).trim()) {
+      return { ok:false, mensaje:"Contraseña actual incorrecta." };
+    }
     if (!nueva || nueva.length < 6) return { ok:false, mensaje:"Mínimo 6 caracteres." };
-
+    
     const hoja = _getHojaUsuarios();
-    hoja.getRange(cuenta.fila, COL_CLAVE+1).setValue(nueva);
+    hoja.getRange(cuenta.fila, COL_CLAVE+1).setValue(generarHashSHA256(nueva));
     hoja.getRange(cuenta.fila, COL_PRIMER_ING+1).setValue("NO");
     hoja.getRange(cuenta.fila, COL_ULT_MOD+1).setValue(_ahora());
-
+    
     _registrarAuditoria({ usuario:cuenta.datos[COL_USUARIO], nombre:cuenta.datos[COL_NOMBRE], rol:cuenta.datos[COL_ROL], correo:cuenta.datos[COL_CORREO]?String(cuenta.datos[COL_CORREO]):"" }, "Cambió contraseña","","","");
     return { ok:true, mensaje:"Contraseña actualizada." };
   } catch(err) { return { ok:false, mensaje:err.message }; }
 }
-
-
