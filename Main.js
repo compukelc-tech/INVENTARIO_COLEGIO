@@ -28,7 +28,8 @@ function obtenerSpreadsheetActivo() {
     }
   } catch (error) {}
 
-  return SpreadsheetApp.openById("1cT177KBK-dNw1c4Q2tHB6jhRFM1Sjx3DgZ9aYLJA29g");
+  // ID extraído de la hoja de cálculo de inventario inyectada
+  return SpreadsheetApp.openById("1lF2MYePVh70NTOGUuQw2pUT5qPsm59HzmTffCNnCeW0");
 }
 
 // =================================================================
@@ -46,7 +47,6 @@ function doGet(e) {
   }
 
   let script = '<script>window.codigoPrecargado = null; window.datosPrecargados = null;<\/script>';
-
   if (e && e.parameter && e.parameter.codigo) {
     const cod = String(e.parameter.codigo).trim();
     const datos = obtenerDatosPorCodigo(cod);
@@ -70,8 +70,8 @@ function doGet(e) {
 
   const tituloPestaña = "Inventario · " + appConfig.nombre_institucion;
   const scriptConfig = `<script>window.appConfigDinamica = ${JSON.stringify(appConfig)};<\/script>`;
-
   const html = HtmlService.createHtmlOutputFromFile("Interfaz");
+
   return HtmlService.createHtmlOutput(
     html.getContent().replace(/<\/head>/i, script + scriptConfig + '</head>')
   )
@@ -79,5 +79,3 @@ function doGet(e) {
   .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
   .addMetaTag("viewport", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no");
 }
-
-
