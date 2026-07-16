@@ -1,7 +1,7 @@
 // =================================================================
 // PROCESO 0: CONEXIÓN CON EL PANEL CENTRAL compukelc
 // =================================================================
-const URL_CENTRAL_COMPUKELC = 'https://drive.google.com/drive/folders/1oeWmxSRd_6Cr4BgkhP50i7EeoIdWbLeu?usp=drive_link';
+const URL_CENTRAL_COMPUKELC = 'https://drive.google.com/drive/folders/1oeWmxSRd_6Cr4BgkhP50i7EeoIdWbLeu?usp=sharing';
 const ID_PROYECTO_COMPUKELC = 'INV-COLEGIOS'; 
 
 // =================================================================
@@ -11,7 +11,7 @@ const NOMBRE_HOJA       = "Hoja 1";
 const NOMBRE_USUARIOS  = "Hoja 2";
 const NOMBRE_AUDITORIA = "Hoja 3";
 const NOMBRE_CONFIG    = "Configuracion"; 
-const CARPETA_ID       = "1T562_jje3uuMVomZB03gREpn87pV9wZ9"; 
+const CARPETA_ID       = "1Qdb_gE8fnT1fUnLGjd1rTGsc7VLW-AgS"; // ID extraído de la carpeta de evidencias
 const LOGO_FALLBACK_ID = "1djaYd2BcOVi1NlsR6jvVSyUC-Cu89EaQ";
 
 const COL_USUARIO     = 0; 
@@ -31,7 +31,7 @@ function verificarEstadoServicio_() {
     const ssCentral = SpreadsheetApp.openByUrl(URL_CENTRAL_COMPUKELC);
     const sheetEmpresas = ssCentral.getSheetByName('Empresas');
     if (!sheetEmpresas) return 'Activo'; 
-
+    
     const data = sheetEmpresas.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
       if (data[i][0].toString().toUpperCase() === ID_PROYECTO_COMPUKELC) {
@@ -48,7 +48,7 @@ function getAppConfig() {
   try {
     const ss = obtenerSpreadsheetActivo();
     let sheet = ss.getSheetByName("Configuracion") || ss.getSheetByName("Configuración");
-    if (!sheet) return { nombre_institucion: "COMPUKELC", url_logo: "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID };
+    if (!sheet) return { nombre_institucion: "compukelc", url_logo: "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID };
     
     const data = sheet.getDataRange().getValues();
     let config = {};
@@ -61,10 +61,11 @@ function getAppConfig() {
       }
     });
 
-    if (!config.nombre_institucion) config.nombre_institucion = "COMPUKELC";
+    if (!config.nombre_institucion) config.nombre_institucion = "compukelc";
     if (!config.url_logo || config.url_logo.trim() === "") config.url_logo = "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID;
+
     return config;
   } catch (error) {
-    return { nombre_institucion: "COMPUKELC", url_logo: "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID };
+    return { nombre_institucion: "compukelc", url_logo: "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID };
   }
 }
