@@ -43,3 +43,28 @@ function verificarEstadoServicio_() {
     return 'Inactivo'; 
   }
 }
+
+function getAppConfig() {
+  try {
+    const ss = obtenerSpreadsheetActivo();
+    let sheet = ss.getSheetByName("Configuracion") || ss.getSheetByName("Configuración");
+    if (!sheet) return { nombre_institucion: "COMPUKELC", url_logo: "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID };
+    
+    const data = sheet.getDataRange().getValues();
+    let config = {};
+    
+    data.forEach(row => {
+      if (row[0] && typeof row[0] === 'string' && row[0].trim() !== "") {
+        let clave = row[0].trim().toLowerCase();
+        let valor = row[1] ? String(row[1]).trim() : "";
+        config[clave] = valor;
+      }
+    });
+
+    if (!config.nombre_institucion) config.nombre_institucion = "COMPUKELC";
+    if (!config.url_logo || config.url_logo.trim() === "") config.url_logo = "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID;
+    return config;
+  } catch (error) {
+    return { nombre_institucion: "COMPUKELC", url_logo: "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID };
+  }
+}
