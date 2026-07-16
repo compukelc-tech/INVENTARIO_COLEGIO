@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sistema de Inventario</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root { --rojo: #8b1a1a; --oro: #d4af37; --texto: #2d3436; --gris: #636e72; --fondo: #f4f5f7; --borde: #dfe6e9; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--fondo); display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    .app-container { width: 100%; max-width: 520px; min-height: 100vh; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.10); padding-bottom: 24px; }
+    header { background: var(--rojo); padding: 28px 20px 48px; text-align: center; color: #fff; border-bottom: 4px solid var(--oro); position: relative; transition: background 0.3s ease; }
+    .escudo-container { width: 86px; height: 86px; background: #fff; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; border: 3px solid var(--oro); overflow: hidden; display: none; }
+    .escudo-container img { width: 100%; height: 100%; object-fit: cover; }
+    header h1 { font-size: 1.15rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; }
+    header p { margin-top: 4px; font-size: .78rem; opacity: .75; }
+    .sesion-badge { position: absolute; top: 12px; left: 12px; display: none; }
+    .sesion-badge.visible { display: block; }
+    .sb-rol { font-size: .58rem; font-weight: 700; text-transform: uppercase; color: var(--oro); background: rgba(0,0,0,.25); padding: 2px 8px; border-radius: 20px; display: inline-block; }
+    .sb-nombre { font-size: .72rem; font-weight: 700; color: #fff; margin-top: 4px; display: block; text-transform: uppercase; max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .btn-menu-wrap { position: absolute; top: 16px; right: 16px; z-index: 10; }
+    .btn-menu { background: rgba(255,255,255,.15); border: 2px solid rgba(255,255,255,.4); color: #fff; width: 40px; height: 40px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .2s; position: relative; }
+    .notif-badge { position: absolute; top: -6px; right: -6px; background: #e74c3c; color: #fff; font-size: .6rem; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: none; align-items: center; justify-content: center; border: 2px solid var(--rojo); }
+    .notif-badge.visible { display: flex; }
+    .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: none; opacity: 0; transition: opacity .3s; }
+    .panel-overlay.visible { display: block; opacity: 1; }
+    .panel-lateral { position: fixed; top: 0; right: -320px; width: 300px; max-width: 90vw; height: 100vh; background: #fff; z-index: 201; box-shadow: -4px 0 24px rgba(0,0,0,.18); display: flex; flex-direction: column; transition: right .3s; overflow-y: auto; }
+    .panel-lateral.abierto { right: 0; }
+    .panel-header { background: var(--rojo); padding: 24px 20px 20px; color: #fff; border-bottom: 3px solid var(--oro); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .panel-header h3 { font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+    .btn-cerrar-panel { background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; }
+    .panel-body { flex: 1; display: flex; flex-direction: column; padding: 20px; gap: 10px; }
+    .panel-usuario-info { background: #f8f9fa; border-radius: 10px; padding: 14px; border-left: 4px solid var(--oro); }
+    .pu-nombre { font-weight: 700; color: var(--texto); font-size: .95rem; }
+    .pu-usuario { color: var(--gris); font-size: .78rem; margin-top: 2px; }
+    .pu-rol { display: inline-block; background: var(--rojo); color: #fff; font-size: .7rem; font-weight: 700; padding: 2px 10px; border-radius: 20px; margin-top: 6px; text-transform: uppercase; }
+    .panel-divider { font-size: .68rem; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .5px; margin: 4px 0 0; }
+    .btn-panel { width: 100%; padding: 13px; border-radius: 10px; font-weight: 700; font-size: .92rem; text-transform: uppercase; cursor: pointer; border: none; }
+    .btn-registrarse { background: var(--oro); color: #2d3436; }
+    .btn-ingresar { background: var(--rojo); color: #fff; }
+    .btn-cerrar-sesion { background: #f1f2f6; color: var(--texto); border: 2px solid var(--borde) !important; }
+    .panel-footer { padding: 14px 20px; font-size: .7rem; color: var(--gris); border-top: 1px solid var(--borde); text-align: center; flex-shrink: 0; }
+    .admin-section { border-top: 2px solid var(--borde); padding-top: 14px; margin-top: 4px; }
+    .admin-section-title { font-size: .68rem; font-weight: 700; color: var(--rojo); text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .btn-refresh { background: none; border: 1px solid var(--borde); border-radius: 6px; padding: 3px 8px; font-size: .7rem; cursor: pointer; color: var(--gris); }
+    .pendiente-card, .usuario-card { background: #fff8f8; border: 1px solid #f5c6c6; border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+    .usuario-card { background: #f8f9fa; border-color: var(--borde); }
+    .pc-nombre, .uc-nombre { font-weight: 700; font-size: .88rem; color: var(--texto); }
+    .pc-user { font-size: .75rem; color: var(--rojo); font-weight: 700; margin-top: 2px; }
+    .pc-dep, .uc-info { font-size: .74rem; color: var(--gris); margin-top: 2px; }
+    .pc-acciones, .uc-btns { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .uc-btns { flex-direction: row; flex-wrap: wrap; }
+    .pc-rol-select, .pc-clave-input { width: 100%; padding: 8px 10px; border: 2px solid var(--borde); border-radius: 8px; font-family: inherit; outline: none; }
+    .pc-btns { display: flex; gap: 6px; }
+    .btn-aprobar, .btn-rechazar, .btn-uc { flex: 1; padding: 9px; border: none; border-radius: 8px; font-weight: 700; font-size: .8rem; text-transform: uppercase; cursor: pointer; color: #fff; }
+    .btn-aprobar { background: #1e8449; } .btn-rechazar { background: #c0392b; }
+    .uc-estado { display: inline-block; font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-top: 4px; text-transform: uppercase; }
+    .estado-aprobado { background: #d4edda; color: #155724; } .estado-pausado { background: #fff3cd; color: #856404; } .estado-bloqueado { background: #cce5ff; color: #004085; }
+    .btn-uc { font-size: .72rem; min-width: 70px; padding: 8px 4px; }
+    .btn-pausar { background: #f39c12; } .btn-activar { background: #27ae60; } .btn-bloquear { background: #2980b9; } .btn-eliminar { background: #c0392b; }
+    .sin-pendientes { font-size: .82rem; color: var(--gris); text-align: center; padding: 10px; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.visible { display: flex; }
+    .modal { background: #fff; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 12px 40px rgba(0,0,0,.2); overflow: hidden; }
+    .modal-head { background: var(--rojo); padding: 20px; color: #fff; border-bottom: 3px solid var(--oro); display: flex; align-items: center; justify-content: space-between; }
+    .modal-head h3 { font-size: 1rem; text-transform: uppercase; }
+    .btn-cerrar-modal { background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; }
+    .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .modal-body input { width: 100%; padding: 12px 14px; border: 2px solid var(--borde); border-radius: 10px; font-size: 15px; font-family: inherit; outline: none; }
+    .btn-accion { width: 100%; padding: 14px; border-radius: 10px; font-weight: 700; font-size: .95rem; text-transform: uppercase; cursor: pointer; border: none; background: var(--rojo); color: #fff; margin-top: 4px; }
+    .msg-modal { font-size: .82rem; text-align: center; padding: 8px 12px; border-radius: 8px; display: none; }
+    .msg-modal.error { background: #ffeaea; color: #c0392b; display: block; } .msg-modal.ok { background: #eafaf1; color: #1e8449; display: block; }
+    .remember-container { display: flex; align-items: center; gap: 8px; margin-top: 4px; user-select: none; }
+    .remember-container input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--rojo); }
+    .remember-container label { margin: 0; font-size: .8rem; color: var(--gris); cursor: pointer; font-weight: 500; }
+
+    .card { margin: -24px 16px 20px; border-radius: 14px; padding: 20px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.10); }
+    .search-wrapper { display: flex; gap: 8px; }
+    .search-wrapper input { flex: 1; padding: 14px 16px; border: 2px solid var(--borde); border-radius: 10px; font-size: 16px; }
+    .btn-buscar { background: var(--rojo); color: #fff; border: none; padding: 14px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+    #resultado { display: none; margin-top: 20px; }
+    .section-title { background: #f1f2f6; padding: 5px 10px; border-left: 4px solid var(--oro); font-size: .72rem; font-weight: 700; color: var(--rojo); text-transform: uppercase; margin: 14px 0 8px; border-radius: 0 4px 4px 0; }
+    .grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .full-info { width: 100%; margin-bottom: 8px; }
+    .info-label { font-weight: 700; color: var(--gris); font-size: .68rem; text-transform: uppercase; display: block; }
+    .info-data { color: var(--texto); font-size: .92rem; margin-top: 2px; word-break: break-word; }
+    .estado-badge { display: inline-block; background: var(--rojo); color: #fff; padding: 3px 12px; border-radius: 20px; font-weight: 700; font-size: .82rem; margin-top: 4px; }
+    .evidencia-bloque { width: 100%; border-radius: 12px; border: 2px solid var(--borde); margin-bottom: 10px; background: #f4f4f4; display: none; min-height: 60px; }
+    .evidencia-bloque img { width: 100%; height: auto; display: block; max-height: 320px; object-fit: contain; }
+    .ev-msg { padding: 20px; text-align: center; font-size: .82rem; color: var(--gris); }
+    #btnCamara { width: 100%; border: 2px dashed var(--oro); background: #fffdf0; color: var(--rojo); padding: 13px; border-radius: 10px; font-weight: 700; cursor: pointer; display: none !important; }
+    body.hay-activo.puede-fotos #btnCamara { display: block !important; }
+    .preview-box { width: 100%; border-radius: 10px; border: 2px solid var(--oro); margin: 10px 0; display: none; }
+    .preview-box img { width: 100%; height: auto; display: block; max-height: 240px; object-fit: contain; }
+    .btn-subir { width: 100%; background: var(--oro); border: none; padding: 13px; border-radius: 10px; font-weight: 700; cursor: pointer; display: none; }
+    .upload-progress { width: 100%; height: 6px; background: var(--borde); border-radius: 99px; overflow: hidden; margin-top: 8px; display: none; }
+    .upload-progress-bar { height: 100%; width: 0%; background: var(--oro); border-radius: 99px; transition: width .4s ease; }
+    #inputCamara, #inputArchivo { display: none; }
+    .botones-accion { display: flex; gap: 10px; margin-top: 24px; }
+    .btn-imprimir { flex: 1; background: #2d3436; color: #fff; border: none; padding: 14px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+    .btn-pdf { flex: 1; background: var(--rojo); color: #fff; border: none; padding: 14px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+    .pie-pagina { width: 100%; max-width: 520px; background: #2d3436; color: #fff; padding: 12px 16px; text-align: center; }
+    .pie-marca { font-size: 1.1rem; font-weight: 700; color: var(--oro); letter-spacing: 1px; }
+    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: #2d3436; color: #fff; padding: 10px 22px; border-radius: 20px; font-size: .85rem; transition: transform .3s; z-index: 999; }
+    #toast.visible { transform: translateX(-50%) translateY(0); }
+
+    .res-card { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .res-titulo { font-weight: 700; font-size: .95rem; color: var(--texto); }
+    .res-sub { font-size: .75rem; color: var(--gris); margin-top: 4px; }
+
+    @media print { 
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
+      body { background: #fff !important; margin: 0; padding: 0; } 
+      header, .panel-overlay, .panel-lateral, .btn-menu-wrap, #btnCamara, .btn-subir, 
+      .botones-accion, .pie-pagina, .search-wrapper, .filtros-avanzados, .modal-overlay, #toast { 
+        display: none !important; 
+      } 
+      .card { box-shadow: none !important; border: none !important; margin: 0 !important; padding: 0 !important; }
+      body.imprimiendo-reporte .app-container { display: none !important; }
+      body.imprimiendo-reporte #printReporteContainer { display: block !important; width: 100%; padding: 0; margin: 0; }
+      .print-item-card { border: 1px solid #bbb; margin-bottom: 15px; page-break-inside: avoid; border-radius: 4px; }
+      .print-item-header { background: #e9ecef; font-weight: bold; padding: 8px 12px; border-bottom: 1px solid #bbb; font-size: 14px; color: #2d3436; }
+      .print-item-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      .print-item-table td { padding: 6px 8px; border-bottom: 1px solid #eee; }
+      .print-item-table .lbl { font-weight: bold; color: #636e72; width: 18%; vertical-align: top; }
+      .print-item-table .val { color: #2d3436; width: 32%; vertical-align: top; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="panel-overlay" id="panelOverlay" onclick="cerrarPanel()"></div>
+<div class="panel-lateral" id="panelLateral">
+  <div class="panel-header">
+    <h3>👤 Mi Cuenta</h3>
+    <button class="btn-cerrar-panel" onclick="cerrarPanel()">✕</button>
+  </div>
+  <div class="panel-body">
+    <div id="vistaNoLogueado">
+      <p style="font-size:.82rem;color:var(--gris);margin-bottom:12px;">Inicia sesión para gestionar evidencias fotográficas.</p>
+      <button class="btn-panel btn-registrarse" onclick="abrirModal('registro')">📝 Registrarse</button><br><br>
+      <button class="btn-panel btn-ingresar" onclick="abrirModal('login')">🔐 Ingresar</button>
+    </div>
+    
+    <div id="vistaLogueado" style="display:none;">
+      <div class="panel-usuario-info">
+        <div class="pu-nombre" id="puNombre">—</div>
+        <div class="pu-usuario" id="puUsuario">—</div>
+        <span class="pu-rol" id="puRol">—</span>
+      </div>
+      <button class="btn-panel btn-cerrar-sesion" onclick="cerrarSesion()">🚪 Cerrar sesión</button>
+      
+      <div class="admin-section" id="zonaSuperadmin" style="display:none;">
+        <div class="admin-section-title">⏳ Solicitudes <button class="btn-refresh" onclick="refrescarAdmin()">↻ Refrescar</button></div>
+        <div id="listaPendientes"><p class="sin-pendientes">Cargando...</p></div>
+        
+        <div class="admin-section-title" style="margin-top:16px;">👥 Usuarios Activos</div>
+        <div id="listaUsuarios"><p class="sin-pendientes">Cargando...</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel-footer">Base de Datos · Sistema de Inventario</div>
+</div>
+
+<div class="modal-overlay" id="modalRegistro">
+  <div class="modal">
+    <div class="modal-head"><h3>📝 Solicitar Acceso</h3><button class="btn-cerrar-modal" onclick="cerrarModal('registro')">✕</button></div>
+    <div class="modal-body">
+      <input type="text" id="regNombre" placeholder="Nombre completo">
+      <input type="text" id="regDependencia" placeholder="Dependencia">
+      <input type="text" id="regCargo" placeholder="Cargo">
+      <input type="email" id="regCorreo" placeholder="Correo electrónico">
+      <div class="msg-modal" id="msgRegistro"></div>
+      <button class="btn-accion" id="btnRegistrar" onclick="enviarRegistro()">Enviar Solicitud</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalRegistroExito">
+  <div class="modal" style="text-align: center; padding-bottom: 20px;">
+    <div class="modal-head" style="background:#1e8449; justify-content: center;">
+      <h3 style="margin: 0; font-size:1.1rem;">✅ Registro Exitoso</h3>
+    </div>
+    <div class="modal-body" style="align-items: center;">
+      <p style="color:var(--gris); font-size:0.9rem; margin-top:5px; line-height:1.4;">Tu nuevo usuario ha sido generado. Guárdalo para tu próximo ingreso cuando el administrador te asigne la contraseña temporal.</p>
+      
+      <div style="background:#f4f5f7; border:2px dashed var(--oro); padding:20px; width:100%; border-radius:12px; margin:15px 0;">
+        <span style="font-size:0.8rem; color:var(--gris); text-transform:uppercase; font-weight:700;">Tu Usuario Asignado:</span><br>
+        <span id="exitoUsuarioTexto" style="font-size:2rem; font-weight:700; color:#000; letter-spacing:1px; display:block; margin:10px 0; word-break: break-all;">---</span>
+        <button onclick="copiarUsuario()" style="background:#2d3436; color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.85rem; text-transform: uppercase;">📋 Copiar Usuario</button>
+      </div>
+      
+      <button class="btn-accion" style="background:#1e8449; width:100%;" onclick="cerrarModalExito()">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalLogin">
+  <div class="modal">
+    <div class="modal-head"><h3>🔐 Ingresar</h3><button class="btn-cerrar-modal" onclick="cerrarModal('login')">✕</button></div>
+    <div class="modal-body">
+      <input type="text" id="loginUsuario" placeholder="Nombre de usuario">
+      <input type="password" id="loginClave" placeholder="Contraseña">
+      <div class="remember-container"><input type="checkbox" id="loginRecordar"><label for="loginRecordar">Recordar datos</label></div>
+      <div class="msg-modal" id="msgLogin"></div>
+      <button class="btn-accion" id="btnLogin" onclick="hacerLogin()">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCambioClave">
+  <div class="modal">
+    <div class="modal-head"><h3>🔑 Crear Contraseña</h3></div>
+    <div class="modal-body">
+      <input type="password" id="ccClaveActual" placeholder="Contraseña asignada">
+      <input type="password" id="ccClaveNueva" placeholder="Nueva contraseña (Min 6)">
+      <input type="password" id="ccClaveConfirm" placeholder="Confirmar nueva">
+      <div class="msg-modal" id="msgCambioClave"></div>
+      <button class="btn-accion" id="btnCambiarClave" onclick="ejecutarCambioClave()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalFiltros">
+  <div class="modal" style="max-width: 500px; max-height: 90vh; display: flex; flex-direction: column;">
+    <div class="modal-head">
+      <h3>🔍 Resultados de Búsqueda</h3>
+      <button class="btn-cerrar-modal" onclick="cerrarModal('filtros')">✕</button>
+    </div>
+    <div class="modal-body" style="overflow-y: auto; flex: 1; background: #f4f5f7; padding: 10px;">
+      <div id="listaResultadosFiltro"></div>
+    </div>
+    <div style="padding: 14px; background: #fff; border-top: 1px solid var(--borde);">
+      <button onclick="generarPDFResultados()" style="width: 100%; padding: 14px; background: #2d3436; color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">📄 IMPRIMIR / GENERAR PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-container">
+  <header>
+    <div class="sesion-badge" id="sesionBadge"><span class="sb-rol" id="sbRolPrint">—</span><span class="sb-nombre" id="sbNombrePrint">—</span></div>
+    <div class="btn-menu-wrap"><button class="btn-menu" onclick="abrirPanel()">☰<span class="notif-badge" id="notifBadge">0</span></button></div>
+    
+    <div class="escudo-container" id="contenedorEscudo"><img id="escudoImg" src="" alt="Escudo"></div>
+    <h1 id="institucionTitulo"></h1><p>SISTEMA DE INVENTARIO</p>
+  </header>
+  
+  <div class="card">
+    <div class="search-wrapper">
+      <input type="text" id="codigoInput" placeholder="Código del activo…" onkeydown="if(event.key==='Enter')buscar();">
+      <button class="btn-buscar" id="btnBuscar" onclick="buscar()">BUSCAR</button>
+    </div>
+
+    <div id="bloqueFiltrosAvanzados" class="filtros-avanzados" style="display: none; margin-top: 14px; background: #f8f9fa; padding: 14px; border-radius: 10px; border: 1px solid var(--borde);">
+      <div style="font-size: .75rem; font-weight: 700; color: var(--rojo); margin-bottom: 10px; text-transform: uppercase;">Búsqueda Avanzada</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+        <select id="fUbicacion" style="width: 100%; min-width: 0; padding: 10px; border-radius: 8px; border: 1px solid var(--borde); outline: none; background: #fff;">
+          <option value="">Ubicación (Todas)</option>
+        </select>
+        <select id="fResponsable" style="width: 100%; min-width: 0; padding: 10px; border-radius: 8px; border: 1px solid var(--borde); outline: none; background: #fff;">
+          <option value="">Responsable (Todos)</option>
+        </select>
+        <select id="fMaterial" style="width: 100%; min-width: 0; padding: 10px; border-radius: 8px; border: 1px solid var(--borde); outline: none; background: #fff;">
+          <option value="">Material (Todos)</option>
+        </select>
+        <select id="fGrupo" style="width: 100%; min-width: 0; padding: 10px; border-radius: 8px; border: 1px solid var(--borde); outline: none; background: #fff;">
+          <option value="">Grupo Contable (Todos)</option>
+        </select>
+        <select id="fServicio" style="width: 100%; min-width: 0; padding: 10px; border-radius: 8px; border: 1px solid var(--borde); outline: none; background: #fff; grid-column: span 2;">
+          <option value="">Servicio (Todos)</option>
+        </select>
+      </div>
+      <button id="btnAplicarFiltro" onclick="aplicarFiltros()" style="width: 100%; background: var(--oro); color: #2d3436; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer;">FILTRAR RESULTADOS</button>
+    </div>
+    
+    <div id="resultado">
+      <h2 id="resNombre" style="color:var(--rojo);font-size:1.15rem;border-bottom:2px solid var(--oro);padding-bottom:6px;margin-top:16px;"></h2>
+
+      <div class="section-title">📍 Ubicación y Responsable</div>
+      <div class="full-info"><span class="info-label">Ubicación</span><div class="info-data" id="resUbicacion"></div></div>
+      <div class="full-info"><span class="info-label">Servicio</span><div class="info-data" id="resServicio"></div></div>
+      <div class="full-info"><span class="info-label">Responsable</span><div class="info-data" id="resResponsable"></div></div>
+
+      <div class="section-title">⚙ Información Técnica</div>
+      <div class="grid-info">
+        <div><span class="info-label">Marca</span><div class="info-data" id="resMarca"></div></div>
+        <div><span class="info-label">Modelo</span><div class="info-data" id="resModelo"></div></div>
+      </div>
+      <div class="grid-info">
+        <div><span class="info-label">Serial</span><div class="info-data" id="resSerial"></div></div>
+        <div><span class="info-label">Estado</span><br><span class="estado-badge" id="resEstado"></span></div>
+      </div>
+
+      <div class="section-title">📊 Datos Contables</div>
+      <div class="grid-info">
+        <div><span class="info-label">Cód. Material</span><div class="info-data" id="resCodMat"></div></div>
+        <div><span class="info-label">Grupo Mat.</span><div class="info-data" id="resGrupMat"></div></div>
+      </div>
+      <div class="full-info"><span class="info-label">Grupo Contable</span><div class="info-data" id="resGrupContable"></div></div>
+      <div class="grid-info">
+        <div><span class="info-label">Tipo Adquisición</span><div class="info-data" id="resTipoAdq"></div></div>
+        <div><span class="info-label">Nro. Compra</span><div class="info-data" id="resNroCompra"></div></div>
+      </div>
+      <div class="grid-info">
+        <div><span class="info-label">Fecha Compra</span><div class="info-data" id="resFCompra"></div></div>
+        <div><span class="info-label">Fecha Entrada</span><div class="info-data" id="resFEntrada"></div></div>
+      </div>
+      <div class="grid-info">
+        <div><span class="info-label">Fecha Baja</span><div class="info-data" id="resFBaja"></div></div>
+        <div><span class="info-label">Motivo Baja</span><div class="info-data" id="resMotivoBaja"></div></div>
+      </div>
+
+      <div class="section-title">📝 Detalles</div>
+      <div class="full-info"><span class="info-label">Descripción</span><div class="info-data" id="resDescRecurso"></div></div>
+      <div class="full-info"><span class="info-label">Observaciones</span><div class="info-data" id="resObs" style="font-style:italic;"></div></div>
+
+      <div class="section-title">📷 Evidencia Fotográfica</div>
+      <div class="evidencia-wrapper">
+        <div class="evidencia-bloque" id="evidenciaBloque"><div class="ev-msg" id="evMsg">Cargando...</div><img id="evidenciaImg" src="" style="display:none;" onload="alCargarImagen()" onerror="alFallarImagen()"></div>
+        <input type="file" id="inputCamara" accept="image/*" capture="environment" onchange="procesarFotoSeleccionada(this)">
+        <input type="file" id="inputArchivo" accept="image/*" onchange="procesarFotoSeleccionada(this)">
+        <button id="btnCamara" onclick="abrirOpcionesFoto()">📷 Tomar Foto</button>
+        <div class="preview-box" id="previewBox"><img id="previewImg" src=""></div>
+        <button class="btn-subir" id="btnSubir" onclick="subirEvidencia()">☁ Subir Evidencia</button>
+        <div class="upload-progress" id="uploadProgress"><div class="upload-progress-bar" id="uploadProgressBar"></div></div>
+      </div>
+      
+      <div class="botones-accion">
+        <button class="btn-imprimir" onclick="window.print()">🖨 IMPRIMIR</button>
+        <button class="btn-pdf" onclick="window.print()">📄 PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="pie-pagina"><span class="pie-marca">Inventario</span></div>
+<div id="toast"></div>
+
+<div id="printReporteContainer" style="display: none;"></div>
+
+<script>
+var _sesion = null, _fotoSeleccionada = null, _activoActual = null, _fileIdActual = null, _reintentos = 0;
+var _globalConfig = {}, _resultadosFiltroCache = [];
+
+function ejecutarCargaConfiguracionDinamica() {
+  const config = window.appConfigDinamica || {};
+  _globalConfig = config;
+  
+  if (config.color_primario) document.documentElement.style.setProperty('--rojo', config.color_primario);
+  if (config.color_secundario) document.documentElement.style.setProperty('--oro', config.color_secundario);
+  
+  if (config.nombre_institucion) {
+    document.getElementById('institucionTitulo').textContent = config.nombre_institucion;
+  }
+  
+  const contEscudo = document.getElementById('contenedorEscudo');
+  const imgEscudo = document.getElementById('escudoImg');
+  
+  if (config.logoBase64) {
+    imgEscudo.src = config.logoBase64;
+    contEscudo.style.display = 'flex';
+  } else {
+    contEscudo.style.display = 'none'; 
+  }
+}
+
+window.onload = function() {
+  ejecutarCargaConfiguracionDinamica();
+
+  if (localStorage.getItem('inventario_remember') === 'true') {
+    document.getElementById('loginUsuario').value = localStorage.getItem('inventario_user') || '';
+    document.getElementById('loginClave').value   = localStorage.getItem('inventario_pass') || '';
+    document.getElementById('loginRecordar').checked = true;
+  }
+  cargarOpcionesFiltro();
+
+  if (typeof window.codigoPrecargado !== 'undefined' && window.codigoPrecargado) {
+    document.getElementById('codigoInput').value = window.codigoPrecargado;
+    if (typeof window.datosPrecargados !== 'undefined' && window.datosPrecargados && !window.datosPrecargados.error) {
+      mostrarDatosBien(window.datosPrecargados);
+    } else {
+      buscar();
+    }
+  }
+};
+
+function mostrarDatosBien(datos) {
+  _activoActual = datos;
+  document.getElementById('resNombre').textContent = datos.nom_material || 'Sin Nombre';
+  document.getElementById('resUbicacion').textContent = datos.nom_ubicacion || '-';
+  document.getElementById('resServicio').textContent = datos.nom_servicio || '-';
+  document.getElementById('resResponsable').textContent = datos.nom_responsable || '-';
+  document.getElementById('resMarca').textContent = datos.marca || '-';
+  document.getElementById('resModelo').textContent = datos.modelo || '-';
+  document.getElementById('resSerial').textContent = datos.serial || '-';
+  
+  var estBadge = document.getElementById('resEstado');
+  estBadge.textContent = datos.estado_bien || 'DESCONOCIDO';
+  
+  document.getElementById('resCodMat').textContent = datos.cod_material || '-';
+  document.getElementById('resGrupMat').textContent = datos.nom_grupo_mat || '-';
+  document.getElementById('resGrupContable').textContent = datos.nom_grupo_contable || '-';
+  document.getElementById('resTipoAdq').textContent = datos.tipo_adquisicion || '-';
+  document.getElementById('resNroCompra').textContent = datos.nro_compra || '-';
+  document.getElementById('resFCompra').textContent = datos.fecha_compra || '-';
+  document.getElementById('resFEntrada').textContent = datos.fecha_entrada || '-';
+  document.getElementById('resFBaja').textContent = datos.fecha_baja || '-';
+  document.getElementById('resMotivoBaja').textContent = datos.motivo_baja || '-';
+  document.getElementById('resDescRecurso').textContent = (datos.descripcion || '') + ' ' + (datos.recurso || '');
+  document.getElementById('resObs').textContent = datos.observacion || 'Sin observaciones.';
+  
+  document.getElementById('resultado').style.display = 'block';
+  
+  _fileIdActual = extraerFileId(datos.enlace_evidencia);
+  _reintentos = 0;
+  var img = document.getElementById('evidenciaImg');
+  var bq = document.getElementById('evidenciaBloque');
+  bq.style.display = 'block';
+  
+  if(_fileIdActual) {
+    document.getElementById('evMsg').textContent = 'Cargando evidencia...';
+    img.src = 'https://drive.google.com/thumbnail?id=' + _fileIdActual + '&sz=w800';
+    img.style.display = 'none';
+    cargarImagenBase64(datos.enlace_evidencia);
+  } else {
+    img.style.display = 'none';
+    document.getElementById('evMsg').textContent = 'Sin evidencia fotográfica registrada.';
+  }
+  sincronizarEstadoCamara();
+}
+
+function buscar() {
+  var cod = document.getElementById('codigoInput').value.trim();
+  if(!cod) { mostrarToast('❌ Ingresa un código válido'); return; }
+  
+  var btn = document.getElementById('btnBuscar');
+  btn.disabled = true; btn.textContent = '...';
+  
+  google.script.run.withSuccessHandler(function(datos) {
+    btn.disabled = false; btn.textContent = 'BUSCAR';
+    if(datos && !datos.error) {
+      mostrarDatosBien(datos);
+    } else {
+      mostrarToast('❌ Activo no encontrado');
+      document.getElementById('resultado').style.display = 'none';
+      _activoActual = null;
+      sincronizarEstadoCamara();
+    }
+  }).withFailureHandler(function() {
+    btn.disabled = false; btn.textContent = 'BUSCAR';
+    mostrarToast('❌ Error al conectar con la base de datos');
+  }).obtenerDatosPorCodigo(cod);
+}
+
+function esSuperadmin() { 
+  if (!_sesion) return false;
+  var r = String(_sesion.rol).trim().toLowerCase();
+  return r.indexOf('super') !== -1; 
+}
+
+function esCualquierAdmin() {
+  if (!_sesion) return false;
+  var r = String(_sesion.rol).trim().toLowerCase();
+  return r.indexOf('super') !== -1 || r === 'admin' || r === 'administrador';
+}
+
+function sincronizarEstadoCamara() {
+  var b = document.body;
+  var bloqueFiltros = document.getElementById('bloqueFiltrosAvanzados');
+  if (bloqueFiltros) {
+    bloqueFiltros.style.display = esCualquierAdmin() ? 'block' : 'none';
+  }
+  if (!_activoActual || !_sesion) { b.classList.remove('hay-activo', 'puede-fotos'); return; }
+  b.classList.add('hay-activo');
+  var r = String(_sesion.rol).trim().toLowerCase();
+  if (r.indexOf('admin') !== -1 || r.indexOf('super') !== -1) b.classList.add('puede-fotos'); else b.classList.remove('puede-fotos');
+}
+
+function mostrarToast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('visible'); setTimeout(function(){ t.classList.remove('visible'); }, 3000); }
+function setMsgModal(id, txt, tipo) { var el = document.getElementById(id); el.textContent = txt; el.className = 'msg-modal ' + (tipo||''); }
+
+// Modales y control de vistas
+function abrirPanel() { document.getElementById('panelLateral').classList.add('abierto'); document.getElementById('panelOverlay').classList.add('visible'); actualizarPanel(); }
+function cerrarPanel() { document.getElementById('panelLateral').classList.remove('abierto'); document.getElementById('panelOverlay').classList.remove('visible'); }
+function abrirModal(t) { cerrarPanel(); document.getElementById(t==='registro'?'modalRegistro':'modalLogin').classList.add('visible'); }
+function cerrarModal(t) { 
+  if (t === 'filtros') document.getElementById('modalFiltros').classList.remove('visible');
+  else document.getElementById(t==='registro'?'modalRegistro':t==='login'?'modalLogin':'modalCambioClave').classList.remove('visible'); 
+}
+
+function actualizarPanel() {
+  if (_sesion) {
+    document.getElementById('vistaNoLogueado').style.display = 'none';
+    document.getElementById('vistaLogueado').style.display = 'block';
+    document.getElementById('puNombre').textContent = _sesion.nombre;
+    document.getElementById('puUsuario').textContent = "ID: " + _sesion.usuario;
+    document.getElementById('puRol').textContent = _sesion.rol;
+    
+    if (esCualquierAdmin()) {
+      document.getElementById('zonaSuperadmin').style.display = 'block';
+      cargarPendientes();
+      cargarUsuarios();
+    } else { document.getElementById('zonaSuperadmin').style.display = 'none'; }
+  } else {
+    document.getElementById('vistaNoLogueado').style.display = 'block';
+    document.getElementById('vistaLogueado').style.display = 'none';
+  }
+}
+
+function cerrarSesion() { _sesion = null; sincronizarEstadoCamara(); cerrarPanel(); mostrarToast('Sesión cerrada'); }
+
+function enviarRegistro() {
+  var data = {
+    nombre: document.getElementById('regNombre').value.trim(),
+    dependencia: document.getElementById('regDependency').value.trim(),
+    cargo: document.getElementById('regCargo').value.trim(),
+    correo: document.getElementById('regCorreo').value.trim()
+  };
+  
+  if (!data.nombre || !data.dependencia || !data.cargo || !data.correo) { setMsgModal('msgRegistro','⚠ Llena todos los campos.','error'); return; }
+  
+  var btn = document.getElementById('btnRegistrar'); 
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  
+  google.script.run.withSuccessHandler(function(r) { 
+    btn.disabled = false; btn.textContent = 'Enviar Solicitud'; 
+    if(r.ok) {
+      cerrarModal('registro');
+      document.getElementById('regNombre').value = '';
+      document.getElementById('regDependency').value = '';
+      document.getElementById('regCargo').value = '';
+      document.getElementById('regCorreo').value = '';
+      document.getElementById('exitoUsuarioTexto').innerText = r.usuarioAsignado;
+      document.getElementById('modalRegistroExito').classList.add('visible');
+    } else { setMsgModal('msgRegistro', '❌ ' + r.mensaje, 'error'); }
+  }).withFailureHandler(function() { btn.disabled = false; setMsgModal('msgRegistro','Error de red','error'); }).registrarUsuario(data);
+}
+
+function copiarUsuario() {
+  var usr = document.getElementById('exitoUsuarioTexto').innerText;
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(usr).then(function() {
+      mostrarToast('📋 Usuario copiado');
+    }).catch(function() { fallbackCopy(usr); });
+  } else { fallbackCopy(usr); }
+}
+
+function fallbackCopy(text) {
+  var ta = document.createElement("textarea");
+  ta.value = text; ta.style.position = "fixed";
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); mostrarToast('📋 Usuario copiado'); } 
+  catch (e) { mostrarToast('❌ Error al copiar'); }
+  document.body.removeChild(ta);
+}
+
+function cerrarModalExito() { document.getElementById('modalRegistroExito').classList.remove('visible'); }
+
+function hacerLogin() {
+  var u = document.getElementById('loginUsuario').value.trim(), c = document.getElementById('loginClave').value;
+  var btn = document.getElementById('btnLogin'); btn.disabled = true; btn.textContent = 'Verificando...';
+  google.script.run.withSuccessHandler(function(r) {
+    btn.disabled = false; btn.textContent = 'Ingresar';
+    if (r.ok) {
+      cerrarModal('login');
+      if(document.getElementById('loginRecordar').checked){ localStorage.setItem('inventario_remember','true'); localStorage.setItem('inventario_user',u); localStorage.setItem('inventario_pass',c); }
+      else { localStorage.removeItem('inventario_remember'); localStorage.removeItem('inventario_pass'); }
+      
+      if(r.primerIngreso){ window._loginPendiente = {usuario:r.usuario, nombre:r.nombre, rol:r.rol}; document.getElementById('modalCambioClave').classList.add('visible'); }
+      else { _sesion = {usuario:r.usuario, nombre:r.nombre, rol:r.rol}; actualizarPanel(); sincronizarEstadoCamara(); mostrarToast('Bienvenido'); }
+    } else { setMsgModal('msgLogin', '❌ '+r.mensaje, 'error'); }
+  }).withFailureHandler(function(){ btn.disabled=false; setMsgModal('msgLogin','Error de red','error'); }).iniciarSesion(u, c);
+}
+
+function ejecutarCambioClave() {
+  if (!window._loginPendiente) { setMsgModal('msgCambioClave','❌ Sesión expirada.','error'); return; }
+  var actual = document.getElementById('ccClaveActual').value, nueva = document.getElementById('ccClaveNueva').value, conf = document.getElementById('ccClaveConfirm').value;
+  if (!actual || !nueva || !conf) { setMsgModal('msgCambioClave','⚠ Llena todos los campos.','error'); return; }
+  if (nueva.length < 6) { setMsgModal('msgCambioClave','⚠ Mínimo 6 caracteres.','error'); return; }
+  if (nueva !== conf) { setMsgModal('msgCambioClave','⚠ Claves no coinciden.','error'); return; }
+
+  var btn = document.getElementById('btnCambiarClave'); btn.disabled = true; btn.textContent = 'Guardando...';
+  google.script.run.withSuccessHandler(function(r) {
+    btn.disabled = false; btn.textContent = 'Guardar';
+    if (r.ok) {
+      setMsgModal('msgCambioClave','✅ Actualizada.','ok');
+      setTimeout(function() {
+        cerrarModal('clave'); _sesion = window._loginPendiente; window._loginPendiente = null;
+        if (localStorage.getItem('inventario_remember') === 'true') localStorage.setItem('inventario_pass', nueva);
+        actualizarPanel(); sincronizarEstadoCamara(); mostrarToast('Contraseña establecida');
+      }, 1500);
+    } else { setMsgModal('msgCambioClave', '❌ '+r.mensaje, 'error'); }
+  }).withFailureHandler(function() { btn.disabled = false; setMsgModal('msgCambioClave','Error de red','error'); }).cambiarContrasena(window._loginPendiente.usuario, actual, nueva);
+}
+
+function extraerFileId(url) {
+  if (!url) return null;
+  if (url.indexOf('|') !== -1) return url.split('|')[1].trim();
+  var m = url.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+function alCargarImagen() { document.getElementById('evMsg').style.display = 'none'; document.getElementById('evidenciaImg').style.display = 'block'; _reintentos = 0; }
+
+function alFallarImagen() {
+  var img = document.getElementById('evidenciaImg');
+  _reintentos++;
+  if (_fileIdActual && _reintentos === 1) { img.src = 'https://drive.google.com/thumbnail?id=' + _fileIdActual + '&sz=w800'; }
+  else if (_fileIdActual && _reintentos === 2) { img.src = 'https://drive.google.com/uc?export=view&id=' + _fileIdActual; }
+  else {
+    img.style.display = 'none';
+    document.getElementById('evMsg').innerHTML = '<a href="https://drive.google.com/file/d/' + (_fileIdActual||'') + '/view" target="_blank" style="color:var(--rojo);font-weight:700;">🔗 Ver en Drive</a>';
+    _reintentos = 0;
+  }
+}
+
+function cargarImagenBase64(enlace) {
+  if (!enlace) return;
+  google.script.run.withSuccessHandler(function(r) {
+    if (r && r.ok && r.b64) {
+      var img = document.getElementById('evidenciaImg');
+      if (img.style.display === 'none' || img.naturalWidth === 0) img.src = r.b64;
+    }
+  }).servirImagenBase64(enlace);
+}
+
+function abrirOpcionesFoto() {
+  if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    var menu = document.getElementById('_menuFoto'); if (menu) { menu.remove(); return; }
+    menu = document.createElement('div'); menu.id = '_menuFoto';
+    menu.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.22);z-index:500;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:240px;';
+    menu.innerHTML = '<button onclick="document.getElementById(\'_menuFoto\').remove();document.getElementById(\'inputCamara\').click();" style="padding:13px;border:none;border-radius:10px;background:var(--rojo);color:#fff;font-weight:700;cursor:pointer;">📷 Tomar foto</button><button onclick="document.getElementById(\'_menuFoto\').remove();document.getElementById(\'inputArchivo\').click();" style="padding:13px;border:none;border-radius:10px;background:#f1f2f6;color:var(--texto);font-weight:700;cursor:pointer;">🖼 Galería</button><button onclick="document.getElementById(\'_menuFoto\').remove();" style="padding:10px;border:none;border-radius:10px;background:#f8f8f8;color:var(--gris);font-weight:700;cursor:pointer;">Cancelar</button>';
+    document.body.appendChild(menu);
+  } else { document.getElementById('inputArchivo').click(); }
+}
+
+function procesarFotoSeleccionada(input) {
+  if (input.files && input.files[0]) {
+    var file = input.files[0];
+    if (!file.type.startsWith('image/')) { mostrarToast('⚠ Solo imágenes.'); input.value = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('previewImg').src = e.target.result;
+      document.getElementById('previewBox').style.display = 'block';
+      document.getElementById('btnSubir').style.display = 'block';
+      _fotoSeleccionada = { base64: e.target.result, mimeType: file.type };
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function subirEvidencia() {
+  if (!_activoActual || !_fotoSeleccionada || !_sesion) return;
+  var camBtn = document.getElementById('btnCamara'); var subBtn = document.getElementById('btnSubir');
+  var prog = document.getElementById('uploadProgress'); var bar = document.getElementById('uploadProgressBar');
+  
+  camBtn.disabled = true; subBtn.disabled = true; subBtn.textContent = 'Subiendo...'; 
+  if (prog && bar) { prog.style.display = 'block'; bar.style.width = '35%'; }
+  
+  google.script.run.withSuccessHandler(function(r) {
+    if (bar) bar.style.width = '100%';
+    setTimeout(function() {
+      camBtn.disabled = false; subBtn.disabled = false; subBtn.textContent = '☁ Subir Evidencia'; 
+      if (prog && bar) { prog.style.display = 'none'; bar.style.width = '0%'; }
+      if (r.ok) {
+        mostrarToast('✅ Guardado'); 
+        _activoActual.enlace_evidencia = r.enlace;
+        _fileIdActual = extraerFileId(r.enlace); _reintentos = 0;
+        document.getElementById('evidenciaImg').style.display = 'none';
+        document.getElementById('evMsg').style.display = 'block';
+        document.getElementById('evMsg').textContent = 'Procesando...';
+        cargarImagenBase64(r.enlace);
+        document.getElementById('previewBox').style.display = 'none'; 
+        document.getElementById('btnSubir').style.display = 'none'; 
+        _fotoSeleccionada = null; sincronizarEstadoCamara();
+      } else { mostrarToast('❌ ' + r.mensaje); }
+    }, 600);
+  }).withFailureHandler(function() { 
+    camBtn.disabled = false; subBtn.disabled = false; subBtn.textContent = '☁ Subir Evidencia'; 
+    if (prog && bar) { prog.style.display = 'none'; }
+    mostrarToast('❌ Error de red.'); 
+  }).guardarEvidenciaFotografica(_fotoSeleccionada.base64, _fotoSeleccionada.mimeType, _activoActual.cod_material, _sesion.usuario);
+}
+
+var _pendCache = [], _usuCache = [];
+
+function cargarPendientes() {
+  var c = document.getElementById('listaPendientes');
+  google.script.run.withSuccessHandler(function(r) {
+    if (r && r.ok && r.lista && r.lista.length > 0) {
+      _pendCache = r.lista; var html = '';
+      for (var i = 0; i < r.lista.length; i++) {
+        var u = r.lista[i];
+        html += '<div class="pendiente-card">' +
+          '<div class="pc-nombre">' + u.nombre + '</div>' +
+          '<div class="pc-user">👤 Usuario: <strong>' + u.usuario + '</strong></div>' +
+          '<div class="pc-dep">✉ ' + u.correo + '</div>' +
+          '<div class="pc-dep">🏢 ' + u.dependencia + ' — ' + u.cargo + '</div>' +
+          '<div class="pc-acciones">' +
+            '<select class="pc-rol-select" id="rol_' + i + '">' +
+              '<option value="lector">👁 Lector</option>' +
+              '<option value="admin">📷 Admin</option>' +
+              '<option value="superadmin">⚡ Superadmin</option>' +
+            '</select>' +
+            '<input class="pc-clave-input" type="text" id="clave_' + i + '" placeholder="Clave temporal" style="margin-top:5px;">' +
+            '<div class="pc-btns" style="margin-top:8px;">' +
+              '<button class="btn-aprobar" onclick="procesarAprobacion(' + i + ')">✔</button>' +
+              '<button class="btn-rechazar" onclick="procesarRechazo(' + i + ')">✖</button>' +
+            '</div>' +
+          '</div></div>';
+      }
+      c.innerHTML = html;
+      document.getElementById('notifBadge').textContent = r.lista.length;
+      document.getElementById('notifBadge').classList.add('visible');
+    } else { c.innerHTML = '<p class="sin-pendientes">✅ Sin solicitudes.</p>'; document.getElementById('notifBadge').classList.remove('visible'); }
+  }).obtenerUsuariosPendientes();
+}
+
+function procesarAprobacion(i) {
+  var c = document.getElementById('clave_' + i).value; 
+  if(!c) { mostrarToast('⚠ Escribe una clave temporal'); return; }
+  google.script.run.withSuccessHandler(function(r) { 
+    mostrarToast(r.ok ? '✅ Aprobado' : '❌ Error'); 
+    if(r.ok){ cargarPendientes(); cargarUsuarios(); } 
+  }).aprobarUsuario(_pendCache[i].usuario, document.getElementById('rol_' + i).value, c, _sesion.usuario);
+}
+
+function procesarRechazo(i) {
+  google.script.run.withSuccessHandler(function(r) { if(r.ok) cargarPendientes(); }).rechazarUsuario(_pendCache[i].usuario);
+}
+
+function cargarUsuarios() {
+  var c = document.getElementById('listaUsuarios');
+  google.script.run.withSuccessHandler(function(r) {
+    if (r && r.ok && r.lista && r.lista.length > 0) {
+      _usuCache = r.lista; var html = '';
+      for (var i = 0; i < r.lista.length; i++) {
+        var u = r.lista[i]; var estLow = String(u.estado).toLowerCase();
+        var btnCambio = estLow === 'aprobado' ? 
+          '<button class="btn-uc btn-pausar" onclick="cEst(' + i + ',\'pausado\')">Pausar</button>' : 
+          '<button class="btn-uc btn-activar" onclick="cEst(' + i + ',\'aprobado\')">Activar</button>';
+        
+        html += '<div class="usuario-card">' +
+          '<div class="uc-nombre">' + u.nombre + '</div>' +
+          '<div class="uc-info">👤 ' + u.usuario + ' | ' + u.rol + '</div>' +
+          '<span class="uc-estado estado-' + estLow + '">' + u.estado + '</span>' +
+          '<div class="uc-btns" style="margin-top:6px;">' + btnCambio +
+            '<button class="btn-uc btn-eliminar" onclick="cEst(' + i + ',\'eliminado\')">Eliminar</button>' +
+          '</div></div>';
+      }
+      c.innerHTML = html;
+    } else { c.innerHTML = '<p class="sin-pendientes">Sin usuarios activos.</p>'; }
+  }).obtenerTodosUsuarios();
+}
+
+function cEst(i, e) {
+  google.script.run.withSuccessHandler(function(r) { if(r.ok){ cargarUsuarios(); cargarPendientes(); } }).cambiarEstadoUsuario(_usuCache[i].usuario, e, _sesion.usuario);
+}
+
+function refrescarAdmin() { cargarPendientes(); cargarUsuarios(); }
+
+function cargarOpcionesFiltro() {
+  google.script.run.withSuccessHandler(function(res) {
+    llenarSelect('fUbicacion', res.ubicaciones, 'Ubicación');
+    llenarSelect('fResponsable', res.responsables, 'Responsable');
+    llenarSelect('fMaterial', res.materiales, 'Material');
+    llenarSelect('fGrupo', res.grupos, 'Grupo Contable');
+    llenarSelect('fServicio', res.servicios, 'Servicio'); 
+  }).obtenerOpcionesFiltros();
+}
+
+function llenarSelect(id, array, label) {
+  var select = document.getElementById(id);
+  select.innerHTML = '<option value="">' + label + ' (Todas)</option>';
+  array.forEach(function(item) {
+    var option = document.createElement('option');
+    option.value = item;
+    option.textContent = item;
+    select.appendChild(option);
+  });
+}
+
+function aplicarFiltros() {
+  var criterios = {
+    ubicacion: document.getElementById('fUbicacion').value,
+    responsable: document.getElementById('fResponsable').value,
+    material: document.getElementById('fMaterial').value,
+    grupo: document.getElementById('fGrupo').value,
+    servicio: document.getElementById('fServicio').value 
+  };
+  var btn = document.getElementById('btnAplicarFiltro');
+  btn.textContent = "BUSCANDO..."; btn.disabled = true;
+
+  google.script.run.withSuccessHandler(function(resultados) {
+    btn.textContent = "FILTRAR RESULTADOS"; btn.disabled = false;
+    _resultadosFiltroCache = resultados;
+    var contenedor = document.getElementById('listaResultadosFiltro');
+    if (resultados.length === 0) {
+      contenedor.innerHTML = '<div style="text-align:center; padding:20px; color:var(--gris);">Sin coincidencias.</div>';
+    } else {
+      var html = '<div style="font-size:0.8rem; margin-bottom:10px; color:var(--rojo); font-weight:bold;">Total: ' + resultados.length + ' item(s)</div>';
+      resultados.forEach(function(item) {
+        html += '<div class="res-card">' +
+                  '<div class="res-titulo">' + item.cod_material + ' - ' + item.nom_material + '</div>' +
+                  '<div class="res-sub">📍 ' + item.nom_ubicacion + ' | 👤 ' + item.nom_responsable + '</div>' +
+                  '<button onclick="verBienDesdeFiltro(\'' + item.cod_material + '\')" style="margin-top:6px; padding:4px 8px; background:var(--rojo); color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:0.75rem;">👁 VER DETALLE</button>' +
+                '</div>';
+      });
+      contenedor.innerHTML = html;
+    }
+    document.getElementById('modalFiltros').classList.add('visible');
+  }).filtrarInventarioAvanzado(criterios);
+}
+
+function verBienDesdeFiltro(codigo) { cerrarModal('filtros'); document.getElementById('codigoInput').value = codigo; buscar(); }
+
+function generarPDFResultados() {
+  if (_resultadosFiltroCache.length === 0) {
+    mostrarToast('❌ No hay datos para imprimir');
+    return;
+  }
+  
+  var inst = _globalConfig.nombre_institucion || "COMPUKELC";
+  
+  var htmlReporte = '<div style="text-align:center; margin-bottom:20px;">' +
+                    '<h2 style="margin:0; font-size:22px; color:#8b1a1a; text-transform:uppercase;">' + inst + '</h2>' +
+                    '<p style="margin:5px 0; font-size:14px; font-weight:bold;">REPORTE DETALLADO DE ACTIVOS FILTRADOS</p>' +
+                    '<p style="margin:0; font-size:12px; color:#636e72;">Total de registros: ' + _resultadosFiltroCache.length + '</p>' +
+                    '</div>';
+
+  _resultadosFiltroCache.forEach(function(item, index) {
+    var m_marca = item.marca || '-';
+    var m_mod   = item.modelo || '-';
+    var m_ser   = item.serial || '-';
+    var m_obs   = item.observacion || 'Ninguna';
+    var m_desc  = (String(item.descripcion || '') + ' ' + String(item.recurso || '')).trim() || '-';
+
+    htmlReporte += '<div class="print-item-card">' +
+                      '<div class="print-item-header">' + (index + 1) + '. CÓDIGO: ' + item.cod_material + ' — ' + item.nom_material + '</div>' +
+                      '<table class="print-item-table">' +
+                        '<tr><td class="lbl">Ubicación:</td><td class="val">' + item.nom_ubicacion + '</td><td class="lbl">Responsable:</td><td class="val">' + item.nom_responsable + '</td></tr>' +
+                        '<tr><td class="lbl">Servicio:</td><td class="val">' + item.nom_servicio + '</td><td class="lbl">Estado:</td><td class="val">' + item.estado_bien + '</td></tr>' +
+                        '<tr><td class="lbl">Marca / Modelo:</td><td class="val">' + m_marca + ' / ' + m_mod + '</td><td class="lbl">Serial:</td><td class="val">' + m_ser + '</td></tr>' +
+                        '<tr><td class="lbl">Grupo Contable:</td><td class="val">' + item.nom_grupo_contable + '</td><td class="lbl">Ingreso:</td><td class="val">' + item.tipo_adquisicion + ' (' + item.fecha_entrada + ')</td></tr>' +
+                        '<tr><td class="lbl">Descripción:</td><td class="val" colspan="3">' + m_desc + '</td></tr>' +
+                        '<tr><td class="lbl">Observaciones:</td><td class="val" colspan="3"><i>' + m_obs + '</i></td></tr>' +
+                      '</table>' +
+                    '</div>';
+  });
+
+  document.getElementById('printReporteContainer').innerHTML = htmlReporte;
+  document.body.classList.add('imprimiendo-reporte');
+
+  setTimeout(function() {
+    window.print();
+    document.body.classList.remove('imprimiendo-reporte');
+  }, 500);
+}
+</script>
+</body>
+</html>
+
+
+
