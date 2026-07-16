@@ -9,11 +9,11 @@ function extraerFileIdGS(url) {
 }
 
 function formatearFecha(valor) { 
-  return valor instanceof Date ? Utilities.formatDate(valor, Session.getScriptTimeZone(), "dd/MM/yyyy") : (valor || ""); 
+   return valor instanceof Date ? Utilities.formatDate(valor, Session.getScriptTimeZone(), "dd/MM/yyyy") : (valor || ""); 
 }
 
 function _ahora() { 
-  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"); 
+   return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"); 
 }
 
 function _getHojaAuditoria() {
@@ -35,4 +35,20 @@ function _registrarAuditoria(sesion, accion, codBien, nomBien, detalle) {
       sesion.usuario||"", sesion.nombre||"", sesion.rol||"", accion||"", codBien||"", nomBien||"", detalle||"", sesion.correo||""
     ]);
   } catch(e) {}
+}
+
+// =================================================================
+// ENCRIPTACIÓN DE SEGURIDAD (HASH SHA-256)
+// =================================================================
+function generarHashSHA256(texto) {
+  if (!texto) return "";
+  const rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(texto).trim(), Utilities.Charset.UTF_8);
+  let txtHash = '';
+  for (let i = 0; i < rawHash.length; i++) {
+    let hashVal = rawHash[i];
+    if (hashVal < 0) { hashVal += 256; }
+    if (hashVal.toString(16).length === 1) { txtHash += '0'; }
+    txtHash += hashVal.toString(16);
+  }
+  return txtHash;
 }
