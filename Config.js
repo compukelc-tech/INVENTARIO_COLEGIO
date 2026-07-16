@@ -3,6 +3,7 @@
 // =================================================================
 const URL_CENTRAL_COMPUKELC = 'https://drive.google.com/drive/folders/1oeWmxSRd_6Cr4BgkhP50i7EeoIdWbLeu?usp=sharing';
 const ID_PROYECTO_COMPUKELC = 'INV-COLEGIOS'; 
+const URL_APP_INVENTARIO    = 'https://script.google.com/macros/s/AKfycbxbGZcP6fmlM6DSuaEpzm6l4mNbwBcm3go-kzUiPD7ZzQ4prmMIHmQ9Rx_cqJlVX0XAkw/exec'; // URL Oficial de Despliegue
 
 // =================================================================
 // PROCESO 1: CONFIGURACIÓN GLOBAL ENLAZADA
@@ -11,7 +12,7 @@ const NOMBRE_HOJA       = "Hoja 1";
 const NOMBRE_USUARIOS  = "Hoja 2";
 const NOMBRE_AUDITORIA = "Hoja 3";
 const NOMBRE_CONFIG    = "Configuracion"; 
-const CARPETA_ID       = "1Qdb_gE8fnT1fUnLGjd1rTGsc7VLW-AgS"; // ID extraído de la carpeta de evidencias
+const CARPETA_ID       = "1Qdb_gE8fnT1fUnLGjd1rTGsc7VLW-AgS"; 
 const LOGO_FALLBACK_ID = "1djaYd2BcOVi1NlsR6jvVSyUC-Cu89EaQ";
 
 const COL_USUARIO     = 0; 
@@ -49,10 +50,10 @@ function getAppConfig() {
     const ss = obtenerSpreadsheetActivo();
     let sheet = ss.getSheetByName("Configuracion") || ss.getSheetByName("Configuración");
     if (!sheet) return { nombre_institucion: "compukelc", url_logo: "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID };
-    
+        
     const data = sheet.getDataRange().getValues();
     let config = {};
-    
+        
     data.forEach(row => {
       if (row[0] && typeof row[0] === 'string' && row[0].trim() !== "") {
         let clave = row[0].trim().toLowerCase();
@@ -60,10 +61,8 @@ function getAppConfig() {
         config[clave] = valor;
       }
     });
-
     if (!config.nombre_institucion) config.nombre_institucion = "compukelc";
     if (!config.url_logo || config.url_logo.trim() === "") config.url_logo = "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID;
-
     return config;
   } catch (error) {
     return { nombre_institucion: "compukelc", url_logo: "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID };
