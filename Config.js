@@ -1,0 +1,45 @@
+// =================================================================
+// PROCESO 0: CONEXIÓN CON EL PANEL CENTRAL compukelc
+// =================================================================
+const URL_CENTRAL_COMPUKELC = 'https://drive.google.com/drive/folders/1oeWmxSRd_6Cr4BgkhP50i7EeoIdWbLeu?usp=drive_link';
+const ID_PROYECTO_COMPUKELC = 'INV-COLEGIOS'; 
+
+// =================================================================
+// PROCESO 1: CONFIGURACIÓN GLOBAL ENLAZADA
+// =================================================================
+const NOMBRE_HOJA       = "Hoja 1";
+const NOMBRE_USUARIOS  = "Hoja 2";
+const NOMBRE_AUDITORIA = "Hoja 3";
+const NOMBRE_CONFIG    = "Configuracion"; 
+const CARPETA_ID       = "1T562_jje3uuMVomZB03gREpn87pV9wZ9"; 
+const LOGO_FALLBACK_ID = "1djaYd2BcOVi1NlsR6jvVSyUC-Cu89EaQ";
+
+const COL_USUARIO     = 0; 
+const COL_NOMBRE      = 1; 
+const COL_DEPENDENCIA = 2; 
+const COL_CARGO       = 3; 
+const COL_ROL         = 4; 
+const COL_CLAVE       = 5; 
+const COL_ESTADO      = 6; 
+const COL_PRIMER_ING  = 7; 
+const COL_FECHA_REG   = 8; 
+const COL_ULT_MOD     = 9; 
+const COL_CORREO      = 10;
+
+function verificarEstadoServicio_() {
+  try {
+    const ssCentral = SpreadsheetApp.openByUrl(URL_CENTRAL_COMPUKELC);
+    const sheetEmpresas = ssCentral.getSheetByName('Empresas');
+    if (!sheetEmpresas) return 'Activo'; 
+
+    const data = sheetEmpresas.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0].toString().toUpperCase() === ID_PROYECTO_COMPUKELC) {
+        return data[i][3].toString().trim();
+      }
+    }
+    return 'No Encontrado'; 
+  } catch (error) {
+    return 'Inactivo'; 
+  }
+}
