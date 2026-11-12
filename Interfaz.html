@@ -515,7 +515,7 @@ function cerrarSesion() { _sesion = null; sincronizarEstadoCamara(); cerrarPanel
 function enviarRegistro() {
   var data = {
     nombre: document.getElementById('regNombre').value.trim(),
-    dependencia: document.getElementById('regDependency').value.trim(),
+    dependencia: document.getElementById('regDependencia').value.trim(),
     cargo: document.getElementById('regCargo').value.trim(),
     correo: document.getElementById('regCorreo').value.trim()
   };
@@ -530,7 +530,7 @@ function enviarRegistro() {
     if(r.ok) {
       cerrarModal('registro');
       document.getElementById('regNombre').value = '';
-      document.getElementById('regDependency').value = '';
+      document.getElementById('regDependencia').value = '';
       document.getElementById('regCargo').value = '';
       document.getElementById('regCorreo').value = '';
       document.getElementById('exitoUsuarioTexto').innerText = r.usuarioAsignado;
@@ -824,7 +824,7 @@ function generarPDFResultados() {
     return;
   }
   
-  var inst = _globalConfig.nombre_institucion || "COMPUKELC";
+  var inst = _globalConfig.nombre_institucion || "compukelc";
   
   var htmlReporte = '<div style="text-align:center; margin-bottom:20px;">' +
                     '<h2 style="margin:0; font-size:22px; color:#8b1a1a; text-transform:uppercase;">' + inst + '</h2>' +
@@ -863,6 +863,3 @@ function generarPDFResultados() {
 </script>
 </body>
 </html>
-
-
-
