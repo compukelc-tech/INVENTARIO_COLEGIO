@@ -12,24 +12,26 @@ function obtenerSpreadsheetActivo() {
     let idAlmacenado = cache.get("ID_DATABASE_ACTIVA");
     if (idAlmacenado) return SpreadsheetApp.openById(idAlmacenado);
 
-    const ssCentral = SpreadsheetApp.openByUrl(URL_CENTRAL_COMPUKELC);
-    const sheetEmpresas = ssCentral.getSheetByName('Empresas');
-    if (sheetEmpresas) {
-      const data = sheetEmpresas.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][0].toString().toUpperCase() === ID_PROYECTO_COMPUKELC) {
-          let idEncontrado = data[i][4] ? data[i][4].toString().trim() : ""; 
-          if (idEncontrado) {
-            cache.put("ID_DATABASE_ACTIVA", idEncontrado, 10800);
-            return SpreadsheetApp.openById(idEncontrado);
+    if (URL_CENTRAL_COMPUKELC.indexOf('/folders/') === -1) {
+      const ssCentral = SpreadsheetApp.openByUrl(URL_CENTRAL_COMPUKELC);
+      const sheetEmpresas = ssCentral.getSheetByName('Empresas');
+      if (sheetEmpresas) {
+        const data = sheetEmpresas.getDataRange().getValues();
+        for (let i = 1; i < data.length; i++) {
+          if (data[i][0].toString().toUpperCase() === ID_PROYECTO_COMPUKELC) {
+            let idEncontrado = data[i][4] ? data[i][4].toString().trim() : ""; 
+            if (idEncontrado) {
+              cache.put("ID_DATABASE_ACTIVA", idEncontrado, 10800);
+              return SpreadsheetApp.openById(idEncontrado);
+            }
           }
         }
       }
     }
   } catch (error) {}
 
-  // ID extraído de la hoja de cálculo de inventario inyectada
-  return SpreadsheetApp.openById("1lF2MYePVh70NTOGUuQw2pUT5qPsm59HzmTffCNnCeW0");
+  // Conecta directamente a la base de datos de inventario configurada
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
 }
 
 // =================================================================
