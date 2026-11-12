@@ -64,8 +64,10 @@ function aprobarUsuario(usuario, rol, claveTemporal, ejecutor) {
 
     const rolFinal = rolNorm.charAt(0).toUpperCase() + rolNorm.slice(1);
     const hoja = _getHojaUsuarios();
+    const claveAGuardar = (typeof generarHashSHA256 === 'function') ? generarHashSHA256(claveTemporal.trim()) : claveTemporal.trim();
+
     hoja.getRange(cuenta.fila, COL_ROL+1).setValue(rolFinal);
-    hoja.getRange(cuenta.fila, COL_CLAVE+1).setValue(claveTemporal.trim());
+    hoja.getRange(cuenta.fila, COL_CLAVE+1).setValue(claveAGuardar);
     hoja.getRange(cuenta.fila, COL_ESTADO+1).setValue("Aprobado");
     hoja.getRange(cuenta.fila, COL_PRIMER_ING+1).setValue("SI");
 
@@ -124,6 +126,7 @@ function guardarEvidenciaFotografica(base64Data, mimeType, codigo, usuarioLoguea
     }
     if (fila !== -1) hojaInv.getRange(fila, 26).setValue(enlaceGuardado);
 
+    _registrarAuditoria({ usuario:usuarioLogueado||"", nombre:"", rol:"", correo:"" }, "Subió evidencia fotográfica", String(codigo).trim(), "", "FileID: " + fileId);
     return { ok:true, enlace:enlaceGuardado, fileId:fileId, mensaje:"Evidencia guardada." };
   } catch(err) { return { ok:false, mensaje:err.message }; }
 }
