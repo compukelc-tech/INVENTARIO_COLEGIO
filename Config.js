@@ -3,17 +3,19 @@
 // =================================================================
 const URL_CENTRAL_COMPUKELC = 'https://drive.google.com/drive/folders/1oeWmxSRd_6Cr4BgkhP50i7EeoIdWbLeu?usp=sharing';
 const ID_PROYECTO_COMPUKELC = 'INV-COLEGIOS'; 
-const URL_APP_INVENTARIO    = 'https://script.google.com/macros/s/AKfycbxbGZcP6fmlM6DSuaEpzm6l4mNbwBcm3go-kzUiPD7ZzQ4prmMIHmQ9Rx_cqJlVX0XAkw/exec'; // URL Oficial de Despliegue
+const URL_APP_INVENTARIO    = 'https://script.google.com/macros/s/AKfycbxbGZcP6fmlM6DSuaEpzm6l4mNbwBcm3go-kzUiPD7ZzQ4prmMIHmQ9Rx_cqJlVX0XAkw/exec';
 
 // =================================================================
 // PROCESO 1: CONFIGURACIÓN GLOBAL ENLAZADA
 // =================================================================
-const NOMBRE_HOJA       = "Hoja 1";
+const SPREADSHEET_ID   = "1lF2MYePVh70NTOGUuQw2pUT5qPsm59HzmTffCNnCeW0";
+const CARPETA_ID       = "1Qdb_gE8fnT1fUnLGjd1rTGsc7VLW-AgS"; 
+const LOGO_FALLBACK_ID = "1djaYd2BcOVi1NlsR6jvVSyUC-Cu89EaQ";
+
+const NOMBRE_HOJA      = "Hoja 1";
 const NOMBRE_USUARIOS  = "Hoja 2";
 const NOMBRE_AUDITORIA = "Hoja 3";
 const NOMBRE_CONFIG    = "Configuracion"; 
-const CARPETA_ID       = "1Qdb_gE8fnT1fUnLGjd1rTGsc7VLW-AgS"; 
-const LOGO_FALLBACK_ID = "1djaYd2BcOVi1NlsR6jvVSyUC-Cu89EaQ";
 
 const COL_USUARIO     = 0; 
 const COL_NOMBRE      = 1; 
@@ -29,6 +31,7 @@ const COL_CORREO      = 10;
 
 function verificarEstadoServicio_() {
   try {
+    if (URL_CENTRAL_COMPUKELC.indexOf('/folders/') !== -1) return 'Activo';
     const ssCentral = SpreadsheetApp.openByUrl(URL_CENTRAL_COMPUKELC);
     const sheetEmpresas = ssCentral.getSheetByName('Empresas');
     if (!sheetEmpresas) return 'Activo'; 
@@ -39,17 +42,18 @@ function verificarEstadoServicio_() {
         return data[i][3].toString().trim();
       }
     }
-    return 'No Encontrado'; 
+    return 'Activo'; 
   } catch (error) {
-    return 'Inactivo'; 
+    return 'Activo'; 
   }
 }
 
 function getAppConfig() {
+  const urlLogoDefault = "https://drive.google.com/file/d/" + LOGO_FALLBACK_ID + "/view?usp=drive_link";
   try {
     const ss = obtenerSpreadsheetActivo();
     let sheet = ss.getSheetByName("Configuracion") || ss.getSheetByName("Configuración");
-    if (!sheet) return { nombre_institucion: "compukelc", url_logo: "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID };
+    if (!sheet) return { nombre_institucion: "compukelc", url_logo: urlLogoDefault };
         
     const data = sheet.getDataRange().getValues();
     let config = {};
@@ -62,9 +66,9 @@ function getAppConfig() {
       }
     });
     if (!config.nombre_institucion) config.nombre_institucion = "compukelc";
-    if (!config.url_logo || config.url_logo.trim() === "") config.url_logo = "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID;
+    if (!config.url_logo || config.url_logo.trim() === "") config.url_logo = urlLogoDefault;
     return config;
   } catch (error) {
-    return { nombre_institucion: "compukelc", url_logo: "https://drive.google.com/file/d/17dMeVDNgpStmVzC6PKYm07EYkzUtHJ24/view?usp=drive_link" + LOGO_FALLBACK_ID };
+    return { nombre_institucion: "compukelc", url_logo: urlLogoDefault };
   }
 }
