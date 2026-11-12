@@ -4,7 +4,8 @@
   <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Sistema de Inventario</title>
+  <title>Sistema de Inventario · compukelc</title>
+  <link rel="icon" type="image/png" href="logo.png">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   
   <style>
@@ -246,7 +247,7 @@
     <div class="btn-menu-wrap"><button class="btn-menu" onclick="abrirPanel()">☰<span class="notif-badge" id="notifBadge">0</span></button></div>
     
     <div class="escudo-container" id="contenedorEscudo"><img id="escudoImg" src="" alt="Escudo"></div>
-    <h1 id="institucionTitulo"></h1><p>SISTEMA DE INVENTARIO</p>
+    <h1 id="institucionTitulo">compukelc</h1><p>SISTEMA DE INVENTARIO</p>
   </header>
   
   <div class="card">
@@ -342,6 +343,48 @@
 <div id="printReporteContainer" style="display: none;"></div>
 
 <script>
+// =================================================================
+// PUENTE HÍBRIDO (SOPORTE GITHUB PAGES + GOOGLE APPS SCRIPT)
+// =================================================================
+var URL_BACKEND_GAS = "https://script.google.com/macros/s/AKfycbxbGZcP6fmlM6DSuaEpzm6l4mNbwBcm3go-kzUiPD7ZzQ4prmMIHmQ9Rx_cqJlVX0XAkw/exec";
+
+if (typeof google === 'undefined' || !google.script || !google.script.run) {
+  window.google = {
+    script: {
+      run: (function() {
+        function crearRunner(onSuccess, onFailure) {
+          return new Proxy({}, {
+            get: function(target, prop) {
+              if (prop === 'withSuccessHandler') {
+                return function(fn) { return crearRunner(fn, onFailure); };
+              }
+              if (prop === 'withFailureHandler') {
+                return function(fn) { return crearRunner(onSuccess, fn); };
+              }
+              return function() {
+                var args = Array.prototype.slice.call(arguments);
+                fetch(URL_BACKEND_GAS, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                  body: JSON.stringify({ action: prop, args: args })
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                  if (onSuccess) onSuccess(data);
+                })
+                .catch(function(err) {
+                  if (onFailure) onFailure(err);
+                });
+              };
+            }
+          });
+        }
+        return crearRunner(null, null);
+      })()
+    }
+  };
+}
+
 var _sesion = null, _fotoSeleccionada = null, _activoActual = null, _fileIdActual = null, _reintentos = 0;
 var _globalConfig = {}, _resultadosFiltroCache = [];
 
@@ -363,7 +406,9 @@ function ejecutarCargaConfiguracionDinamica() {
     imgEscudo.src = config.logoBase64;
     contEscudo.style.display = 'flex';
   } else {
-    contEscudo.style.display = 'none'; 
+    imgEscudo.src = 'logo.png';
+    imgEscudo.onload = function() { contEscudo.style.display = 'flex'; };
+    imgEscudo.onerror = function() { contEscudo.style.display = 'none'; };
   }
 }
 
@@ -377,6 +422,9 @@ window.onload = function() {
   }
   cargarOpcionesFiltro();
 
+  var urlParams = new URLSearchParams(window.location.search);
+  var codUrl = urlParams.get('codigo');
+
   if (typeof window.codigoPrecargado !== 'undefined' && window.codigoPrecargado) {
     document.getElementById('codigoInput').value = window.codigoPrecargado;
     if (typeof window.datosPrecargados !== 'undefined' && window.datosPrecargados && !window.datosPrecargados.error) {
@@ -384,6 +432,9 @@ window.onload = function() {
     } else {
       buscar();
     }
+  } else if (codUrl) {
+    document.getElementById('codigoInput').value = codUrl.trim();
+    buscar();
   }
 };
 
@@ -527,7 +578,7 @@ function enviarRegistro() {
   
   google.script.run.withSuccessHandler(function(r) { 
     btn.disabled = false; btn.textContent = 'Enviar Solicitud'; 
-    if(r.ok) {
+    if(r && r.ok) {
       cerrarModal('registro');
       document.getElementById('regNombre').value = '';
       document.getElementById('regDependencia').value = '';
@@ -535,8 +586,8 @@ function enviarRegistro() {
       document.getElementById('regCorreo').value = '';
       document.getElementById('exitoUsuarioTexto').innerText = r.usuarioAsignado;
       document.getElementById('modalRegistroExito').classList.add('visible');
-    } else { setMsgModal('msgRegistro', '❌ ' + r.mensaje, 'error'); }
-  }).withFailureHandler(function() { btn.disabled = false; setMsgModal('msgRegistro','Error de red','error'); }).registrarUsuario(data);
+    } else { setMsgModal('msgRegistro', '❌ ' + (r ? r.mensaje : 'Error'), 'error'); }
+  }).withFailureHandler(function() { btn.disabled = false; btn.textContent = 'Enviar Solicitud'; setMsgModal('msgRegistro','Error de red','error'); }).registrarUsuario(data);
 }
 
 function copiarUsuario() {
@@ -564,15 +615,15 @@ function hacerLogin() {
   var btn = document.getElementById('btnLogin'); btn.disabled = true; btn.textContent = 'Verificando...';
   google.script.run.withSuccessHandler(function(r) {
     btn.disabled = false; btn.textContent = 'Ingresar';
-    if (r.ok) {
+    if (r && r.ok) {
       cerrarModal('login');
       if(document.getElementById('loginRecordar').checked){ localStorage.setItem('inventario_remember','true'); localStorage.setItem('inventario_user',u); localStorage.setItem('inventario_pass',c); }
       else { localStorage.removeItem('inventario_remember'); localStorage.removeItem('inventario_pass'); }
       
       if(r.primerIngreso){ window._loginPendiente = {usuario:r.usuario, nombre:r.nombre, rol:r.rol}; document.getElementById('modalCambioClave').classList.add('visible'); }
       else { _sesion = {usuario:r.usuario, nombre:r.nombre, rol:r.rol}; actualizarPanel(); sincronizarEstadoCamara(); mostrarToast('Bienvenido'); }
-    } else { setMsgModal('msgLogin', '❌ '+r.mensaje, 'error'); }
-  }).withFailureHandler(function(){ btn.disabled=false; setMsgModal('msgLogin','Error de red','error'); }).iniciarSesion(u, c);
+    } else { setMsgModal('msgLogin', '❌ '+(r ? r.mensaje : 'Error'), 'error'); }
+  }).withFailureHandler(function(){ btn.disabled=false; btn.textContent = 'Ingresar'; setMsgModal('msgLogin','Error de red','error'); }).iniciarSesion(u, c);
 }
 
 function ejecutarCambioClave() {
@@ -585,15 +636,15 @@ function ejecutarCambioClave() {
   var btn = document.getElementById('btnCambiarClave'); btn.disabled = true; btn.textContent = 'Guardando...';
   google.script.run.withSuccessHandler(function(r) {
     btn.disabled = false; btn.textContent = 'Guardar';
-    if (r.ok) {
+    if (r && r.ok) {
       setMsgModal('msgCambioClave','✅ Actualizada.','ok');
       setTimeout(function() {
         cerrarModal('clave'); _sesion = window._loginPendiente; window._loginPendiente = null;
         if (localStorage.getItem('inventario_remember') === 'true') localStorage.setItem('inventario_pass', nueva);
         actualizarPanel(); sincronizarEstadoCamara(); mostrarToast('Contraseña establecida');
       }, 1500);
-    } else { setMsgModal('msgCambioClave', '❌ '+r.mensaje, 'error'); }
-  }).withFailureHandler(function() { btn.disabled = false; setMsgModal('msgCambioClave','Error de red','error'); }).cambiarContrasena(window._loginPendiente.usuario, actual, nueva);
+    } else { setMsgModal('msgCambioClave', '❌ '+(r ? r.mensaje : 'Error'), 'error'); }
+  }).withFailureHandler(function() { btn.disabled = false; btn.textContent = 'Guardar'; setMsgModal('msgCambioClave','Error de red','error'); }).cambiarContrasena(window._loginPendiente.usuario, actual, nueva);
 }
 
 function extraerFileId(url) {
@@ -666,7 +717,7 @@ function subirEvidencia() {
     setTimeout(function() {
       camBtn.disabled = false; subBtn.disabled = false; subBtn.textContent = '☁ Subir Evidencia'; 
       if (prog && bar) { prog.style.display = 'none'; bar.style.width = '0%'; }
-      if (r.ok) {
+      if (r && r.ok) {
         mostrarToast('✅ Guardado'); 
         _activoActual.enlace_evidencia = r.enlace;
         _fileIdActual = extraerFileId(r.enlace); _reintentos = 0;
@@ -677,7 +728,7 @@ function subirEvidencia() {
         document.getElementById('previewBox').style.display = 'none'; 
         document.getElementById('btnSubir').style.display = 'none'; 
         _fotoSeleccionada = null; sincronizarEstadoCamara();
-      } else { mostrarToast('❌ ' + r.mensaje); }
+      } else { mostrarToast('❌ ' + (r ? r.mensaje : 'Error')); }
     }, 600);
   }).withFailureHandler(function() { 
     camBtn.disabled = false; subBtn.disabled = false; subBtn.textContent = '☁ Subir Evidencia'; 
@@ -724,13 +775,13 @@ function procesarAprobacion(i) {
   var c = document.getElementById('clave_' + i).value; 
   if(!c) { mostrarToast('⚠ Escribe una clave temporal'); return; }
   google.script.run.withSuccessHandler(function(r) { 
-    mostrarToast(r.ok ? '✅ Aprobado' : '❌ Error'); 
-    if(r.ok){ cargarPendientes(); cargarUsuarios(); } 
+    mostrarToast(r && r.ok ? '✅ Aprobado' : '❌ Error'); 
+    if(r && r.ok){ cargarPendientes(); cargarUsuarios(); } 
   }).aprobarUsuario(_pendCache[i].usuario, document.getElementById('rol_' + i).value, c, _sesion.usuario);
 }
 
 function procesarRechazo(i) {
-  google.script.run.withSuccessHandler(function(r) { if(r.ok) cargarPendientes(); }).rechazarUsuario(_pendCache[i].usuario);
+  google.script.run.withSuccessHandler(function(r) { if(r && r.ok) cargarPendientes(); }).rechazarUsuario(_pendCache[i].usuario);
 }
 
 function cargarUsuarios() {
@@ -758,18 +809,19 @@ function cargarUsuarios() {
 }
 
 function cEst(i, e) {
-  google.script.run.withSuccessHandler(function(r) { if(r.ok){ cargarUsuarios(); cargarPendientes(); } }).cambiarEstadoUsuario(_usuCache[i].usuario, e, _sesion.usuario);
+  google.script.run.withSuccessHandler(function(r) { if(r && r.ok){ cargarUsuarios(); cargarPendientes(); } }).cambiarEstadoUsuario(_usuCache[i].usuario, e, _sesion.usuario);
 }
 
 function refrescarAdmin() { cargarPendientes(); cargarUsuarios(); }
 
 function cargarOpcionesFiltro() {
   google.script.run.withSuccessHandler(function(res) {
-    llenarSelect('fUbicacion', res.ubicaciones, 'Ubicación');
-    llenarSelect('fResponsable', res.responsables, 'Responsable');
-    llenarSelect('fMaterial', res.materiales, 'Material');
-    llenarSelect('fGrupo', res.grupos, 'Grupo Contable');
-    llenarSelect('fServicio', res.servicios, 'Servicio'); 
+    if (!res) return;
+    llenarSelect('fUbicacion', res.ubicaciones || [], 'Ubicación');
+    llenarSelect('fResponsable', res.responsables || [], 'Responsable');
+    llenarSelect('fMaterial', res.materiales || [], 'Material');
+    llenarSelect('fGrupo', res.grupos || [], 'Grupo Contable');
+    llenarSelect('fServicio', res.servicios || [], 'Servicio'); 
   }).obtenerOpcionesFiltros();
 }
 
@@ -797,13 +849,13 @@ function aplicarFiltros() {
 
   google.script.run.withSuccessHandler(function(resultados) {
     btn.textContent = "FILTRAR RESULTADOS"; btn.disabled = false;
-    _resultadosFiltroCache = resultados;
+    _resultadosFiltroCache = resultados || [];
     var contenedor = document.getElementById('listaResultadosFiltro');
-    if (resultados.length === 0) {
+    if (_resultadosFiltroCache.length === 0) {
       contenedor.innerHTML = '<div style="text-align:center; padding:20px; color:var(--gris);">Sin coincidencias.</div>';
     } else {
-      var html = '<div style="font-size:0.8rem; margin-bottom:10px; color:var(--rojo); font-weight:bold;">Total: ' + resultados.length + ' item(s)</div>';
-      resultados.forEach(function(item) {
+      var html = '<div style="font-size:0.8rem; margin-bottom:10px; color:var(--rojo); font-weight:bold;">Total: ' + _resultadosFiltroCache.length + ' item(s)</div>';
+      _resultadosFiltroCache.forEach(function(item) {
         html += '<div class="res-card">' +
                   '<div class="res-titulo">' + item.cod_material + ' - ' + item.nom_material + '</div>' +
                   '<div class="res-sub">📍 ' + item.nom_ubicacion + ' | 👤 ' + item.nom_responsable + '</div>' +
